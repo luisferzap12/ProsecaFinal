@@ -1,0 +1,80 @@
+﻿@page "/vacunas/transaccion"
+@inject IRepository repository
+@inject SweetAlertService swal
+@inject NavigationManager nav
+@using Proseca.Shared.DTOs
+
+<h3>Aplicar Vacuna con Registro Clínico</h3>
+
+<EditForm Model="model" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="row">
+        <div class="col-md-4">
+            <label>Finca</label>
+            <InputSelect @bind-Value="model.FincaId" class="form-control">
+                <option value="">Seleccione...</option>
+                @foreach (var f in Fincas)
+                {
+                    <option value="@f.Id">@f.Nombre</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="col-md-4">
+            <label>Animal</label>
+            <InputSelect @bind-Value="model.AnimalId" class="form-control">
+                <option value="">Seleccione...</option>
+                @foreach (var a in Animales.Where(x => x.FincaId == model.FincaId))
+                {
+                    <option value="@a.Id">@a.Nombre</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+
+    <hr /><h5>Vacunación</h5>
+
+    <InputText @bind-Value="model.NombreVacuna" class="form-control" placeholder="Nombre Vacuna" />
+    <InputText @bind-Value="model.Razon" class="form-control" placeholder="Razón de aplicación" />
+
+    <hr /><h5>Evento Clínico Asociado</h5>
+
+    <InputText @bind-Value="model.EventoNombre" class="form-control" placeholder="Nombre Evento" />
+    <InputText @bind-Value="model.Enfermedad" class="form-control" placeholder="Enfermedad" />
+    <InputTextArea @bind-Value="model.Descripcion" class="form-control" rows="3" />
+
+    <button class="btn btn-success mt-3">Guardar</button>
+    <button class="btn btn-secondary mt-3" @onclick="Volver">Cancelar</button>
+</EditForm>
+
+@code {
+    VacunaTransaccionDTO model = new();
+
+    List<Finca> Fincas = new();
+    List<Animal> Animales = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Fincas = (await repository.GetAsync<List<Finca>>("/api/Fincas")).Response!;
+        Animales = (await repository.GetAsync<List<Animal>>("/api/Animales")).Response!;
+    }
+
+    async Task Guardar()
+    {
+        var r = await repository.PostAsync("/api/Vacunas/TransaccionVacuna", model);
+
+        if (r.Error)
+        {
+            var msg = await r.GetErrorMessageAsync();
+            await swal.FireAsync("Error", msg, SweetAlertIcon.Error);
+            return;
+        }
+
+        await swal.FireAsync("OK", "Transacción Registrada", SweetAlertIcon.Success);
+        nav.NavigateTo("/Vacunas");
+    }
+
+    void Volver() => nav.NavigateTo("/Vacunas");
+}
+
